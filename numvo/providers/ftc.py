@@ -7,6 +7,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from numvo.freshness import freshness_label, source_age_days
 from numvo.models import ProviderResult
 from numvo.providers.base import PhoneIntelligenceProvider
 
@@ -102,6 +103,40 @@ class FTCComplaintIndex:
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_complaints_created ON complaints(created_date)"
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+                """
+            )
+
+    def set_metadata(self, key: str, value: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO metadata(key, value) VALUES (?, ?)",
+                (key, value),
+            )
+
+    def get_metadata(self, key: str) -> str | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM metadata WHERE key = ?",
+                (key,),
+            ).fetchone()
+        return row[0] if row else None
+
+    def freshness(self, now: datetime | None = None) -> dict:
+        latest_source_date = self.get_metadata("latest_source_date")
+        last_successful_refresh = self.get_metadata("last_successful_refresh")
+        age_days = source_age_days(latest_source_date, now=now)
+        return {
+            "latest_source_date": latest_source_date,
+            "last_successful_refresh": last_successful_refresh,
+            "data_age_days": age_days,
+            "data_freshness": freshness_label(age_days),
+        }
 
     def ingest_csv(self, csv_path: str | Path) -> int:
         csv_path = Path(csv_path)
@@ -181,7 +216,7 @@ class FTCComplaintIndex:
         if len(dates) >= 2:
             span_days = max(0, (max(dates) - min(dates)).days)
 
-        return {
+        result = {
             "complaint_count": total,
             "recent_30d": recent_30,
             "recent_90d": recent_90,
@@ -194,6 +229,8 @@ class FTCComplaintIndex:
                 for subject, count in subjects.most_common(3)
             ],
         }
+        result.update(self.freshness(now))
+        return result
 
 
 class FTCComplaintProvider(PhoneIntelligenceProvider):
