@@ -3,9 +3,13 @@ from mcp.server.fastmcp import FastMCP
 from numvo import Numvo
 from numvo.normalize import normalize_phone_number
 from numvo.providers.mock import MockReputationProvider
+from numvo.providers.phonenumbers_provider import PhoneNumbersProvider
 
 mcp = FastMCP("Numvo")
-service = Numvo([MockReputationProvider()])
+service = Numvo([
+    PhoneNumbersProvider(),
+    MockReputationProvider(),
+])
 
 
 @mcp.tool()
