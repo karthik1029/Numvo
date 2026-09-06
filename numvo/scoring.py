@@ -40,12 +40,27 @@ def _ftc_signal(result: ProviderResult) -> int:
     return min(score, 100)
 
 
+def _ipqs_signal(result: ProviderResult) -> int:
+    metadata = result.metadata or {}
+    score = int(metadata.get("fraud_score", 0) or 0)
+
+    if metadata.get("spammer"):
+        score = max(score, 90)
+    if metadata.get("recent_abuse"):
+        score = max(score, 90)
+    if metadata.get("risky"):
+        score = max(score, 85)
+
+    return max(0, min(score, 100))
+
+
 def calculate_spam_score(results: list[ProviderResult]) -> int:
     if not results:
         return 0
 
     weighted = 0.0
     total_confidence = 0.0
+    reputation_signals: list[int] = []
 
     for result in results:
         confidence = max(0.0, min(1.0, result.confidence))
@@ -54,16 +69,32 @@ def calculate_spam_score(results: list[ProviderResult]) -> int:
 
         if result.provider == "ftc_dnc":
             signal = _ftc_signal(result)
+        elif result.provider == "ipqs":
+            signal = _ipqs_signal(result)
         else:
             signal = min(result.spam_reports * 10, 100)
 
         weighted += signal * confidence
         total_confidence += confidence
 
+        if result.category == "spam_reputation" and signal > 0:
+            reputation_signals.append(signal)
+
     if total_confidence == 0:
         return 0
 
-    return round(weighted / total_confidence)
+    score = round(weighted / total_confidence)
+
+    # Independent-source agreement is stronger than either source alone.
+    if len(reputation_signals) >= 2:
+        strong_sources = sum(signal >= 70 for signal in reputation_signals)
+        moderate_sources = sum(signal >= 40 for signal in reputation_signals)
+        if strong_sources >= 2:
+            score += 15
+        elif moderate_sources >= 2:
+            score += 8
+
+    return min(score, 100)
 
 
 def risk_label(score: int) -> str:
