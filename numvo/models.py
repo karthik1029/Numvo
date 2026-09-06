@@ -16,6 +16,9 @@ class PhoneCheckResult:
     phone_number: str
     spam_score: int
     risk: str
+    confidence_score: int
+    confidence: str
+    reasons: list[str]
     provider_results: list[ProviderResult]
 
     def to_dict(self) -> dict[str, Any]:
@@ -23,5 +26,8 @@ class PhoneCheckResult:
             "phone_number": self.phone_number,
             "spam_score": self.spam_score,
             "risk": self.risk,
+            "confidence_score": self.confidence_score,
+            "confidence": self.confidence,
+            "reasons": self.reasons,
             "provider_results": [result.__dict__ for result in self.provider_results],
         }
