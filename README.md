@@ -14,22 +14,37 @@ Client / MCP Host
  ┌──────────────────────┐
  │ PhoneNumbersProvider │  metadata / validity
  │ FTCComplaintProvider │  complaint reputation
+ │ IPQSProvider         │  fraud / abuse reputation
  └──────────────────────┘
        ↓
-Normalize → aggregate → score → explain
+Normalize → aggregate → cross-validate → score → explain
 ```
 
 ## What Numvo uses today
 
 ### Phone metadata
 
-`phonenumbers` provides number validity, region, carrier information when available, and number type.
+`phonenumbers` provides number validity, region, carrier information when available, and number type. Metadata alone never makes a number spam.
 
 ### FTC complaint reputation
 
 Numvo can ingest the FTC Do Not Call complaint CSV data into a local SQLite index. Lookups are then performed by exact phone number without downloading complaint data during every request.
 
 The FTC data is consumer-submitted complaint evidence. Numvo treats it as a signal, not absolute proof that a number is malicious.
+
+### IPQS reputation
+
+If `IPQS_API_KEY` is configured, Numvo queries IPQualityScore for an independent reputation signal including fraud score, recent abuse, risky/spammer flags, and selected phone attributes.
+
+Set the key before starting the MCP server:
+
+```bash
+export IPQS_API_KEY="your-key"
+# Windows PowerShell:
+# $env:IPQS_API_KEY="your-key"
+```
+
+The key is read from the environment and should not be committed to the repository.
 
 ## Spam scoring
 
@@ -40,7 +55,9 @@ FTC complaint scoring considers:
 - robocall ratio
 - whether complaints span multiple dates
 
-Recent repeated complaints carry more weight than isolated old complaints.
+IPQS contributes its fraud score plus risky, spammer, and recent-abuse signals.
+
+When two independent reputation providers both produce strong evidence, Numvo applies an agreement boost. This makes multi-source confirmation stronger than a single provider result.
 
 Risk labels are:
 
@@ -91,8 +108,8 @@ check_phone_number(phone_number)
 normalize_number(phone_number)
 ```
 
-`check_phone_number()` combines real phone metadata and locally indexed FTC complaint signals.
+`check_phone_number()` combines phone metadata, locally indexed FTC complaint evidence, and IPQS reputation when configured.
 
 ## Status
 
-Early development. The next major step is adding another independent reputation source so Numvo can cross-check FTC complaints instead of relying on a single complaint dataset.
+Early development. Numvo now supports multi-source spam-risk cross-validation. The next major step is adding an explicit overall evidence-confidence value and clearer human-readable reasons for each score.
