@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "numvo"
+version = "0.1.0"
+description = "Phone number intelligence and spam-risk detection with a reusable Python orchestration layer and MCP."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "phonenumbers>=8.13",
+  "mcp>=1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
