@@ -70,7 +70,7 @@ Risk labels are:
 
 ## Confidence and explanations
 
-Every Numvo result now separates **risk** from **confidence**.
+Every Numvo result separates **risk** from **confidence**.
 
 - `spam_score` answers: how suspicious does the available evidence look?
 - `confidence_score` answers: how much independent reputation evidence supports that conclusion?
@@ -107,27 +107,43 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## Index FTC complaint data
+## Automatic FTC refresh
 
-Download an FTC Do Not Call complaint CSV, then run:
+Numvo can now check recent FTC daily complaint files automatically and ingest any published rows into the local SQLite index.
+
+Refresh the most recent 7 calendar days:
 
 ```bash
-python scripts/ingest_ftc_csv.py path/to/complaints.csv
+python scripts/refresh_ftc.py
 ```
 
-By default Numvo stores the index at:
+Or choose a wider window:
+
+```bash
+python scripts/refresh_ftc.py --days 30
+```
+
+Numvo checks each date in the requested window. If the FTC has no file for a date, such as a weekend or non-published day, it records `not_published` and continues.
+
+Downloaded files are cached under:
+
+```text
+data/ftc_daily/
+```
+
+The SQLite index is stored at:
 
 ```text
 data/ftc_complaints.sqlite3
 ```
 
-You can choose another database path:
+The refresh is safe to rerun: downloaded CSVs are reused and `INSERT OR IGNORE` prevents identical complaint rows from being duplicated.
+
+You can still ingest a local FTC CSV manually:
 
 ```bash
-python scripts/ingest_ftc_csv.py complaints.csv --db data/my_ftc.sqlite3
+python scripts/ingest_ftc_csv.py path/to/complaints.csv
 ```
-
-The ingest process uses `INSERT OR IGNORE`, so re-ingesting overlapping FTC files does not duplicate identical complaint rows.
 
 ## MCP tools
 
@@ -142,4 +158,4 @@ normalize_number(phone_number)
 
 ## Status
 
-Early development. Numvo now supports multi-source spam-risk cross-validation, explicit evidence confidence, and human-readable explanations.
+Early development. Numvo now supports multi-source spam-risk cross-validation, explicit evidence confidence, human-readable explanations, and automatic FTC complaint-data refresh.
