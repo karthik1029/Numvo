@@ -28,7 +28,7 @@ def confidence_score(results: list[ProviderResult]) -> int:
         metadata = result.metadata or {}
 
         if result.provider == "ftc_dnc":
-            total = int(metadata.get("complaint_count", result.spam_reports or 0))
+            total = int(metadata.get("complaint_count", 0))
             recent_30 = int(metadata.get("recent_30d", 0))
             if total >= 10 or recent_30 >= 3:
                 strong_sources += 1
@@ -44,14 +44,6 @@ def confidence_score(results: list[ProviderResult]) -> int:
                 score += 15
             elif fraud_score >= 70:
                 score += 5
-
-        else:
-            if result.spam_reports >= 10 or result.confidence >= 0.85:
-                strong_sources += 1
-                score += 15
-            elif result.spam_reports > 0 or result.confidence >= 0.5:
-                score += 5
-            score -= _freshness_penalty(metadata)
 
     if strong_sources >= 2:
         score += 20
@@ -93,7 +85,7 @@ def evidence_reasons(results: list[ProviderResult]) -> list[str]:
             continue
 
         if result.provider == "ftc_dnc":
-            total = int(metadata.get("complaint_count", result.spam_reports or 0))
+            total = int(metadata.get("complaint_count", 0))
             recent_30 = int(metadata.get("recent_30d", 0))
             recent_90 = int(metadata.get("recent_90d", 0))
             robocall_count = int(metadata.get("robocall_count", 0))
@@ -127,22 +119,6 @@ def evidence_reasons(results: list[ProviderResult]) -> list[str]:
                 reasons.append("IPQS marks the number as risky")
             if fraud_score >= 85 or metadata.get("recent_abuse") or metadata.get("spammer"):
                 strong_reputation_sources += 1
-
-        elif result.category == "spam_reputation":
-            if result.spam_reports > 0:
-                suffix = "s" if result.spam_reports != 1 else ""
-                reasons.append(
-                    f"{result.provider} reports {result.spam_reports} spam report{suffix}"
-                )
-            elif result.confidence > 0:
-                reasons.append(
-                    f"{result.provider} returned a spam-reputation signal with confidence {result.confidence:.2f}"
-                )
-
-            if result.spam_reports >= 10 or result.confidence >= 0.85:
-                strong_reputation_sources += 1
-
-            _append_freshness_reason(reasons, result.provider, metadata)
 
     if strong_reputation_sources >= 2:
         reasons.append("Two independent reputation sources show strong risk signals")
