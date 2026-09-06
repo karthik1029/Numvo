@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 
+from numvo.explain import confidence_label, confidence_score, evidence_reasons
 from numvo.models import PhoneCheckResult, ProviderResult
 from numvo.normalize import normalize_phone_number
 from numvo.providers.base import PhoneIntelligenceProvider
@@ -26,10 +27,15 @@ class Numvo:
                     )
                 )
 
-        score = calculate_spam_score(results)
+        spam_score = calculate_spam_score(results)
+        confidence_value = confidence_score(results)
+
         return PhoneCheckResult(
             phone_number=normalized,
-            spam_score=score,
-            risk=risk_label(score),
+            spam_score=spam_score,
+            risk=risk_label(spam_score),
+            confidence_score=confidence_value,
+            confidence=confidence_label(confidence_value),
+            reasons=evidence_reasons(results),
             provider_results=results,
         )
