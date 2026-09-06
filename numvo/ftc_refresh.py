@@ -3,7 +3,7 @@ from __future__ import annotations
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from numvo.providers.ftc import FTCComplaintIndex
@@ -47,7 +47,7 @@ class FTCRefresher:
         if not target.exists():
             request = urllib.request.Request(
                 self._url_for(day),
-                headers={"User-Agent": "Numvo/0.1"},
+                headers={"User-Agent": "Numvo/0.2"},
             )
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
@@ -60,6 +60,13 @@ class FTCRefresher:
                 raise RuntimeError(f"FTC download failed: {exc.reason}") from exc
 
         inserted = self.index.ingest_csv(target)
+        refreshed_at = datetime.now(timezone.utc).isoformat()
+        self.index.set_metadata("last_successful_refresh", refreshed_at)
+
+        current_latest = self.index.get_metadata("latest_source_date")
+        if current_latest is None or day.isoformat() > current_latest:
+            self.index.set_metadata("latest_source_date", day.isoformat())
+
         return RefreshResult(day.isoformat(), True, inserted, "ok")
 
     def refresh_recent(self, days: int = 7, *, end_date: date | None = None) -> list[RefreshResult]:
