@@ -20,7 +20,7 @@ def test_numvo_normalizes_and_scores():
 
     assert result.phone_number == "+12025550123"
     assert result.spam_score == 80
-    assert result.risk == "HIGH"
+    assert result.risk == "VERY_HIGH"
     assert result.provider_results[0].provider == "fake"
 
 
