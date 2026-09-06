@@ -68,6 +68,36 @@ Risk labels are:
 75-100 VERY_HIGH
 ```
 
+## Confidence and explanations
+
+Every Numvo result now separates **risk** from **confidence**.
+
+- `spam_score` answers: how suspicious does the available evidence look?
+- `confidence_score` answers: how much independent reputation evidence supports that conclusion?
+
+Confidence labels are:
+
+```text
+0-19   VERY_LOW
+20-49  LOW
+50-79  MEDIUM
+80-100 HIGH
+```
+
+The result also includes human-readable `reasons`, for example:
+
+```text
+FTC complaint history: 31 reports
+12 FTC complaints in the last 30 days
+84% of FTC reports were robocall-related
+IPQS fraud score: 94/100
+IPQS identifies the number as a spammer
+IPQS reports recent abuse activity
+Two independent reputation sources show strong risk signals
+```
+
+This is intentionally explainable: a high risk score with very low confidence should be treated differently from a high risk score confirmed by multiple independent sources.
+
 ## Development
 
 ```bash
@@ -108,8 +138,8 @@ check_phone_number(phone_number)
 normalize_number(phone_number)
 ```
 
-`check_phone_number()` combines phone metadata, locally indexed FTC complaint evidence, and IPQS reputation when configured.
+`check_phone_number()` combines phone metadata, locally indexed FTC complaint evidence, and IPQS reputation when configured, then returns risk, confidence, reasons, and raw provider signals.
 
 ## Status
 
-Early development. Numvo now supports multi-source spam-risk cross-validation. The next major step is adding an explicit overall evidence-confidence value and clearer human-readable reasons for each score.
+Early development. Numvo now supports multi-source spam-risk cross-validation, explicit evidence confidence, and human-readable explanations.
