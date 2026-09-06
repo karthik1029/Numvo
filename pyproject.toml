@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "numvo"
-version = "0.2.0"
+version = "0.3.0"
 description = "Phone number intelligence and spam-risk detection with a reusable Python orchestration layer and MCP."
 readme = "README.md"
 requires-python = ">=3.10"
