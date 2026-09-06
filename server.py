@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -5,20 +6,27 @@ from mcp.server.fastmcp import FastMCP
 from numvo import Numvo
 from numvo.normalize import normalize_phone_number
 from numvo.providers.ftc import FTCComplaintProvider
+from numvo.providers.ipqs import IPQSPhoneReputationProvider
 from numvo.providers.phonenumbers_provider import PhoneNumbersProvider
 
 mcp = FastMCP("Numvo")
 
 FTC_DB = Path("data/ftc_complaints.sqlite3")
-service = Numvo([
+providers = [
     PhoneNumbersProvider(),
     FTCComplaintProvider(FTC_DB),
-])
+]
+
+ipqs_api_key = os.getenv("IPQS_API_KEY")
+if ipqs_api_key:
+    providers.append(IPQSPhoneReputationProvider(ipqs_api_key))
+
+service = Numvo(providers)
 
 
 @mcp.tool()
 def check_phone_number(phone_number: str) -> dict:
-    """Check a phone number and return metadata plus FTC complaint-based spam risk signals."""
+    """Check a phone number using metadata plus independent reputation signals."""
     return service.check(phone_number).to_dict()
 
 
